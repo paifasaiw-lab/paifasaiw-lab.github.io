@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEWTEAM 354 SOLUTION Kanban & Dashboard - ระบบจัดการงานของทีม</title>
+    <!-- นำเข้า Font Awesome สำหรับไอคอนสวยๆ -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- นำเข้าสไตล์หลักของเรา -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+    <!-- หน้าจอเข้าสู่ระบบ (Login overlay) -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <div class="login-logo">
+                <img src="LOGO.jpg" alt="NEWTEAM 354 SOLUTION LOGO">
+                <span class="login-title" style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">NEWTEAM 354</span>
+            </div>
+            <div class="login-subtitle" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px;">ระบบจัดการงานคัมบังและแดชบอร์ด</div>
+            
+            <div class="error-message" id="loginErrorMessage">
+                <i class="fa-solid fa-circle-exclamation"></i> ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง
+            </div>
+            
+            <form id="loginForm">
+                <div class="form-group" style="text-align: left;">
+                    <label for="usernameField" class="form-label">ชื่อผู้ใช้งาน</label>
+                    <input type="text" id="usernameField" class="form-control" placeholder="ระบุชื่อผู้ใช้งาน" required autocomplete="username">
+                </div>
+                <div class="form-group" style="text-align: left; margin-top: 12px;">
+                    <label for="passwordField" class="form-label">รหัสผ่าน</label>
+                    <input type="password" id="passwordField" class="form-control" placeholder="ระบุรหัสผ่าน" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px; padding: 12px; justify-content: center; font-size: 0.95rem;">
+                    <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+                </button>
+            </form>
+            
+            <div class="login-hint">
+                <strong>บัญชีผู้ใช้งานทดสอบ (รหัสผ่าน: 1234):</strong>
+                <ul style="list-style: none; padding-left: 0; margin-top: 8px; line-height: 1.6;">
+                    <li>• หัวหน้างาน: <code>admin</code></li>
+                    <li>• ทีมงาน NUT: <code>nut</code></li>
+                    <li>• ทีมงาน BOY: <code>boy</code></li>
+                    <li>• ทีมงาน A: <code>a</code></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-container">
+        <!-- แถบเมนูด้านบน -->
+        <header>
+            <div class="logo">
+                <img src="LOGO.jpg" alt="NEWTEAM 354 SOLUTION LOGO">
+                <span>NEWTEAM 354 SOLUTION</span>
+            </div>
+            
+            <div class="controls">
+                <!-- ตัวเลือกผู้ใช้งาน / บทบาท -->
+                <div class="role-selector">
+                    <button class="select-btn" id="roleSelectBtn">
+                        <i class="fa-solid fa-user-tie"></i>
+                        <span id="currentRoleText">บทบาท: หัวหน้างาน</span>
+                        <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem;"></i>
+                    </button>
+                    <div class="dropdown-menu" id="roleDropdown">
+                        <div class="dropdown-item active" data-role="manager">
+                            <i class="fa-solid fa-user-tie"></i> หัวหน้างาน (ภาพรวม)
+                        </div>
+                        <div class="dropdown-item" data-role="member" data-member="NUT">
+                            <i class="fa-solid fa-user"></i> NUT (ทีมงาน)
+                        </div>
+                        <div class="dropdown-item" data-role="member" data-member="BOY">
+                            <i class="fa-solid fa-user"></i> BOY (ทีมงาน)
+                        </div>
+                        <div class="dropdown-item" data-role="member" data-member="A">
+                            <i class="fa-solid fa-user"></i> A (ทีมงาน)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ปุ่มส่งออกข้อมูลสำรอง -->
+                <button class="theme-toggle-btn" id="exportDataBtn" title="สำรองข้อมูลสำรอง (JSON)">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+
+                <!-- ปุ่มเปิดไฟล์/นำเข้าข้อมูล -->
+                <button class="theme-toggle-btn" id="importDataBtn" title="นำเข้าข้อมูลงาน (JSON)">
+                    <i class="fa-solid fa-upload"></i>
+                </button>
+                <input type="file" id="importFileInput" accept=".json" style="display: none;">
+
+                <!-- ปุ่มสลับโหมดกลางวัน/กลางคืน -->
+                <button class="theme-toggle-btn" id="themeToggleBtn" title="สลับโหมด มืด/สว่าง">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+
+                <!-- ปุ่มเปลี่ยนรหัสผ่าน -->
+                <button class="theme-toggle-btn" id="changePasswordBtn" title="เปลี่ยนรหัสผ่าน">
+                    <i class="fa-solid fa-key"></i>
+                </button>
+
+                <!-- ปุ่มออกจากระบบ -->
+                <button class="theme-toggle-btn" id="logoutBtn" title="ออกจากระบบ" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--status-overdue);">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ==============================================
+             1. มุมมองสำหรับหัวหน้างาน (MANAGER VIEW)
+             ============================================== -->
+        <main id="managerView" class="view-section active">
+            <!-- ส่วนการ์ดสรุปตัวเลขสถิติ -->
+            <div class="dashboard-grid">
+                <!-- 1. งานทั้งหมด -->
+                <div class="stat-card stat-card-total">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statTotalTasks">0</span>
+                        <span class="stat-label">งานทั้งหมดในระบบ</span>
+                    </div>
+                </div>
+                <!-- 2. เสร็จสิ้นแล้ว -->
+                <div class="stat-card stat-card-done">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statCompletedTasks">0</span>
+                        <span class="stat-label">เสร็จสิ้นแล้ว</span>
+                    </div>
+                </div>
+                <!-- 3. กำลังดำเนินการ -->
+                <div class="stat-card stat-card-progress">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-spinner"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statActiveTasks">0</span>
+                        <span class="stat-label">กำลังดำเนินการ</span>
+                    </div>
+                </div>
+                <!-- 4. เกินกำหนดส่ง -->
+                <div class="stat-card stat-card-overdue">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statOverdueTasks">0</span>
+                        <span class="stat-label">เกินกำหนดส่ง (Overdue)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ส่วนกราฟวิเคราะห์ (Analytics) -->
+            <div class="analytics-section">
+                <!-- กราฟแท่งแสดงภาระงานของทีม -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <span class="card-title">
+                            <i class="fa-solid fa-chart-simple" style="color: var(--primary);"></i>
+                            ภาระงานจำแนกตามสมาชิกในทีม
+                        </span>
+                    </div>
+                    <div class="chart-container" id="barChartContainer">
+                        <!-- แท่งกราฟจะถูกวาดด้วย Javascript -->
+                    </div>
+                </div>
+
+                <!-- กราฟวงกลม Donut แสดงความคืบหน้าโดยรวม -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <span class="card-title">
+                            <i class="fa-solid fa-chart-pie" style="color: #10b981;"></i>
+                            สัดส่วนงานที่ทำเสร็จสิ้น
+                        </span>
+                    </div>
+                    <div class="donut-chart-container">
+                        <div class="donut-svg-wrapper">
+                            <svg class="donut-svg" width="150" height="150" viewBox="0 0 150 150">
+                                <defs>
+                                    <linearGradient id="donutGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#8b5cf6" />
+                                        <stop offset="100%" stop-color="#10b981" />
+                                    </linearGradient>
+                                </defs>
+                                <circle class="donut-circle-bg" cx="75" cy="75" r="60"></circle>
+                                <circle class="donut-circle-val" id="donutValueCircle" cx="75" cy="75" r="60"></circle>
+                            </svg>
+                            <div class="donut-center-text">
+                                <div class="donut-percent" id="donutPercentText">0%</div>
+                                <div class="donut-label">เสร็จสิ้น</div>
+                            </div>
+                        </div>
+                        <div class="donut-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: var(--status-done);"></div>
+                                <span>เสร็จสิ้น</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: var(--border-color);"></div>
+                                <span>งานคงเหลือ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ตารางสรุปงานทั้งหมดและระบบคัดกรอง -->
+            <div class="tasks-table-section">
+                <div class="filter-bar">
+                    <!-- ค้นหา -->
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="searchInput" class="search-input" placeholder="ค้นหาชื่องานหรือรายละเอียด...">
+                    </div>
+                    <!-- ปุ่มกรองข้อมูล -->
+                    <div class="filter-group">
+                        <select id="filterAssignee" class="filter-select">
+                            <option value="">ผู้รับผิดชอบทั้งหมด</option>
+                            <option value="NUT">NUT</option>
+                            <option value="BOY">BOY</option>
+                            <option value="A">A</option>
+                        </select>
+                        <select id="filterPriority" class="filter-select">
+                            <option value="">ระดับความสำคัญทั้งหมด</option>
+                            <option value="high">สูง</option>
+                            <option value="medium">ปานกลาง</option>
+                            <option value="low">ต่ำ</option>
+                        </select>
+                        <select id="filterStatus" class="filter-select">
+                            <option value="">สถานะทั้งหมด</option>
+                            <option value="todo">ต้องทำ</option>
+                            <option value="progress">กำลังทำ</option>
+                            <option value="review">ตรวจทาน</option>
+                            <option value="done">เสร็จสิ้น</option>
+                        </select>
+                        
+                        <button class="btn-primary" id="addNewTaskBtn">
+                            <i class="fa-solid fa-plus"></i> มอบหมายงานใหม่
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ตารางแสดงรายการงาน -->
+                <div class="table-wrapper">
+                    <table class="task-table">
+                        <thead>
+                            <tr>
+                                <th>งาน / รายละเอียด</th>
+                                <th>ผู้รับผิดชอบ</th>
+                                <th>ความสำคัญ</th>
+                                <th>วันที่เริ่ม / กำหนดส่ง</th>
+                                <th>สถานะ</th>
+                                <th style="text-align: center;">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskTableBody">
+                            <!-- ข้อมูลตารางจะถูกใส่ด้วย Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+
+        <!-- ==============================================
+             2. มุมมองสำหรับทีมงาน (MEMBER VIEW / KANBAN BOARD)
+             ============================================== -->
+        <main id="memberView" class="view-section">
+            <div class="card-header" style="margin-bottom: 24px; padding: 10px 0;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="avatar" id="memberHeaderAvatar" style="width: 46px; height: 46px; font-size: 1.2rem;">N</div>
+                    <div>
+                        <h2 class="card-title" id="memberBoardTitle" style="font-size: 1.5rem;">NUT</h2>
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">ลากและวางการ์ดเพื่อเลื่อนสถานะงานของคุณ</span>
+                    </div>
+                </div>
+                <button class="btn-primary" id="memberCreateTaskBtn">
+                    <i class="fa-solid fa-plus"></i> เพิ่มงานใหม่ของฉัน
+                </button>
+            </div>
+
+            <!-- กระดานคัมบัง (Kanban Board) -->
+            <div class="kanban-board">
+                <!-- 1. ช่อง ต้องทำ -->
+                <div class="kanban-column column-todo" data-status="todo">
+                    <div class="column-header">
+                        <div class="column-title-group">
+                            <div class="column-dot"></div>
+                            <span class="column-title">ต้องทำ</span>
+                        </div>
+                        <span class="task-count" id="count-todo">0</span>
+                    </div>
+                    <div class="kanban-cards-container" id="cards-todo">
+                        <!-- การ์ดงานจะถูกเรนเดอร์ในนี้ -->
+                    </div>
+                </div>
+
+                <!-- 2. ช่อง กำลังทำ -->
+                <div class="kanban-column column-progress" data-status="progress">
+                    <div class="column-header">
+                        <div class="column-title-group">
+                            <div class="column-dot"></div>
+                            <span class="column-title">กำลังทำ</span>
+                        </div>
+                        <span class="task-count" id="count-progress">0</span>
+                    </div>
+                    <div class="kanban-cards-container" id="cards-progress">
+                        <!-- การ์ดงานจะถูกเรนเดอร์ในนี้ -->
+                    </div>
+                </div>
+
+                <!-- 3. ช่อง ตรวจทาน -->
+                <div class="kanban-column column-review" data-status="review">
+                    <div class="column-header">
+                        <div class="column-title-group">
+                            <div class="column-dot"></div>
+                            <span class="column-title">ตรวจทาน</span>
+                        </div>
+                        <span class="task-count" id="count-review">0</span>
+                    </div>
+                    <div class="kanban-cards-container" id="cards-review">
+                        <!-- การ์ดงานจะถูกเรนเดอร์ในนี้ -->
+                    </div>
+                </div>
+
+                <!-- 4. ช่อง เสร็จสิ้น -->
+                <div class="kanban-column column-done" data-status="done">
+                    <div class="column-header">
+                        <div class="column-title-group">
+                            <div class="column-dot"></div>
+                            <span class="column-title">เสร็จสิ้น</span>
+                        </div>
+                        <span class="task-count" id="count-done">0</span>
+                    </div>
+                    <div class="kanban-cards-container" id="cards-done">
+                        <!-- การ์ดงานจะถูกเรนเดอร์ในนี้ -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==============================================
+         3. หน้าต่างเพิ่ม/แก้ไขงาน (TASK MODAL POPUP)
+         ============================================== -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">มอบหมายงานใหม่</h3>
+                <button class="close-modal-btn" id="closeModalBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <form id="taskForm">
+                <input type="hidden" id="taskIdField">
+                
+                <div class="form-group">
+                    <label for="taskTitle" class="form-label">ชื่องาน <span style="color: var(--status-overdue);">*</span></label>
+                    <input type="text" id="taskTitle" class="form-control" placeholder="ระบุชื่องานที่ต้องการมอบหมาย" required autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="taskDesc" class="form-label">รายละเอียดงาน</label>
+                    <textarea id="taskDesc" class="form-control" placeholder="ระบุรายละเอียด หรือขั้นตอนการดำเนินงาน"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskAssignee" class="form-label">ผู้รับผิดชอบ <span style="color: var(--status-overdue);">*</span></label>
+                        <select id="taskAssignee" class="form-control" required>
+                            <option value="NUT">NUT</option>
+                            <option value="BOY">BOY</option>
+                            <option value="A">A</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskPriority" class="form-label">ระดับความสำคัญ</label>
+                        <select id="taskPriority" class="form-control">
+                            <option value="low">ต่ำ</option>
+                            <option value="medium" selected>ปานกลาง</option>
+                            <option value="high">สูง</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskStartDate" class="form-label">วันที่เริ่มงาน</label>
+                        <input type="date" id="taskStartDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskDeadline" class="form-label">กำหนดส่ง (Deadline) <span style="color: var(--status-overdue);">*</span></label>
+                        <input type="date" id="taskDeadline" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskStatus" class="form-label">สถานะของงาน</label>
+                    <select id="taskStatus" class="form-control">
+                        <option value="todo">ต้องทำ</option>
+                        <option value="progress">กำลังทำ</option>
+                        <option value="review">ตรวจทาน</option>
+                        <option value="done">เสร็จสิ้น</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelModalBtn">ยกเลิก</button>
+                    <button type="submit" class="btn-primary" id="saveTaskBtn">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==============================================
+         4. หน้าต่างเปลี่ยนรหัสผ่าน (CHANGE PASSWORD MODAL)
+         ============================================== -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title">เปลี่ยนรหัสผ่าน</h3>
+                <button class="close-modal-btn" id="closePasswordModalBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <form id="passwordForm">
+                <div class="form-group">
+                    <label for="oldPasswordField" class="form-label">รหัสผ่านปัจจุบัน <span style="color: var(--status-overdue);">*</span></label>
+                    <input type="password" id="oldPasswordField" class="form-control" placeholder="ระบุรหัสผ่านปัจจุบัน" required>
+                </div>
+                <div class="form-group" style="margin-top: 14px;">
+                    <label for="newPasswordField" class="form-label">รหัสผ่านใหม่ <span style="color: var(--status-overdue);">*</span></label>
+                    <input type="password" id="newPasswordField" class="form-control" placeholder="ระบุรหัสผ่านใหม่" required>
+                </div>
+                <div class="form-group" style="margin-top: 14px;">
+                    <label for="confirmNewPasswordField" class="form-label">ยืนยันรหัสผ่านใหม่ <span style="color: var(--status-overdue);">*</span></label>
+                    <input type="password" id="confirmNewPasswordField" class="form-control" placeholder="ยืนยันรหัสผ่านใหม่" required>
+                </div>
+                
+                <div class="modal-footer" style="margin-top: 20px;">
+                    <button type="button" class="btn-secondary" id="cancelPasswordModalBtn">ยกเลิก</button>
+                    <button type="submit" class="btn-primary">บันทึกรหัสผ่านใหม่</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- นำเข้าโค้ด Javascript -->
+    <script src="app.js"></script>
+</body>
+</html>
