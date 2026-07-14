@@ -1,8 +1,8 @@
 {
-  "name": "newteam-354-solution-kanban",
+  "name": "newteam-354-solution",
   "version": "1.0.0",
   "private": true,
-  "description": "ระบบจัดการงานและกระดานคัมบังสำหรับทีม (NEWTEAM 354 SOLUTION Kanban & Dashboard)",
+  "description": "ระบบจัดการงาน (NEWTEAM 354 SOLUTION )",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
